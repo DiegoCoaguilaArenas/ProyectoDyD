@@ -67,8 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $autor_id     = !empty($_POST['autor_id']) ? (int)$_POST['autor_id'] : null;
     $usuario_id   = $_SESSION['user_id'];
 
-    $foto_nombre = null;
-    $pdf_nombre  = null;
+    // CORRECCIÓN: Iniciar con texto vacío en lugar de null para evitar bloqueos estrictos de MySQL
+    $foto_nombre = '';
+    $pdf_nombre  = '';
 
     if (isset($_FILES['foto_principal']) && $_FILES['foto_principal']['error'] === UPLOAD_ERR_OK) {
         $ext = pathinfo($_FILES['foto_principal']['name'], PATHINFO_EXTENSION);
@@ -85,10 +86,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         move_uploaded_file($_FILES['pdf_adjunto']['tmp_name'], 'uploads/' . $pdf_nombre);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO reportajes (titulo, slug, resumen_corto, desarrollo, foto_principal, fuente_imagen, pdf_adjunto, fecha_publicacion, es_destacado, estado, autor_id, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$titulo, $slug, $resumen, $desarrollo, $foto_nombre, $fuente_img, $pdf_nombre, $fecha, $destacado, $estado, $autor_id, $usuario_id]);
-    header("Location: reportajes.php");
-    exit;
+    // CORRECCIÓN: Envolver en un try-catch para capturar cualquier error futuro de la base de datos
+    try {
+        $stmt = $pdo->prepare("INSERT INTO reportajes (titulo, slug, resumen_corto, desarrollo, foto_principal, fuente_imagen, pdf_adjunto, fecha_publicacion, es_destacado, estado, autor_id, usuario_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$titulo, $slug, $resumen, $desarrollo, $foto_nombre, $fuente_img, $pdf_nombre, $fecha, $destacado, $estado, $autor_id, $usuario_id]);
+        header("Location: reportajes.php");
+        exit;
+    } catch (\PDOException $e) {
+        // En caso de fallar, en lugar de recargar silenciosamente, mostrará este error
+        die("<div style='background:#ffdddd; color:#d8000c; padding:20px; font-family:sans-serif; border: 1px solid #d8000c;'>
+                <strong>¡Ocurrió un error al intentar guardar el reportaje!</strong><br><br>
+                Detalle técnico: " . $e->getMessage() . "
+             </div>");
+    }
 }
 
 // --- PROCESAR ELIMINACIÓN ---
