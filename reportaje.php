@@ -253,11 +253,42 @@ $imagen_og = !empty($reportaje['foto_principal']) ? $dominio . '/revista-admin/u
           <a class="navbar-brand" href="index.php">
               <img src="assets/images/logo.png" alt="Logo DDP" style="height:75px;" />
           </a> 
+          
+          <!-- Botón de menú para celulares -->
+          <button class="navbar-toggler collapsed bg-gradient" type="button" data-toggle="collapse"
+              data-target="#navbarTogglerDemo02" aria-controls="navbarTogglerDemo02" aria-expanded="false"
+              aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon fa icon-expand fa-bars"></span>
+              <span class="navbar-toggler-icon fa icon-close fa-times"></span>
+          </button>
+
           <div class="collapse navbar-collapse" id="navbarTogglerDemo02">
               <ul class="navbar-nav ml-auto">
-                  <li class="nav-item"><a class="nav-link" href="index.php">Inicio</a></li>
-                  <li class="nav-item active"><a class="nav-link" href="reportajes.php">Reportajes</a></li>
-                  <li class="nav-item"><a class="nav-link" href="boletines.php">Boletín NTEP</a></li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="index.php">Inicio</a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="index.php#actualidad">Actualidad</a>
+                  </li>
+                  <!-- La clase "active" mantiene Reportajes resaltado en rojo -->
+                  <li class="nav-item active">
+                      <a class="nav-link" href="reportajes.php">Reportajes</a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="podcasts.php">Podcast</a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="boletines.php">Boletín NTEP</a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="about.html">Alianzas</a>
+                  </li>
+                  <li class="nav-item">
+                      <a class="nav-link" href="contact.html">Sobre D&D</a>
+                  </li>               
+                  <li class="ml-2">
+                      <a href="#footer" class="btn btn-style btn-outline-secondary">Contacto</a>
+                  </li>
               </ul>
           </div>
       </nav>
