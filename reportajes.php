@@ -10,31 +10,40 @@ function fechaEs($fecha) {
 }
 
 // ==========================================
-// CONFIGURACIÓN DEL PAGINADOR
+// CONFIGURACIÓN DEL PAGINADOR Y FILTROS
 // ==========================================
 $limite = 9; // Cantidad de reportajes que se verán por cada página
 $pagina_actual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
 if ($pagina_actual < 1) $pagina_actual = 1;
 
-// 1. Contar cuántos reportajes publicados existen en total
-$stmtCount = $pdo->query("SELECT COUNT(*) FROM reportajes WHERE estado = 'Publicado' AND fecha_publicacion <= NOW()");
+// Verificar si se hizo clic en un mes del archivo (ej. 2026-08)
+$mesFiltro = isset($_GET['mes']) ? $_GET['mes'] : '';
+$condicionMes = "";
+if (!empty($mesFiltro)) {
+    $condicionMes = " AND DATE_FORMAT(r.fecha_publicacion, '%Y-%m') = :mes ";
+}
+
+// 1. Contar cuántos reportajes publicados existen en total (aplicando filtro si existe)
+$sqlCount = "SELECT COUNT(*) FROM reportajes r WHERE r.estado = 'Publicado' AND r.fecha_publicacion <= NOW() $condicionMes";
+$stmtCount = $pdo->prepare($sqlCount);
+if (!empty($mesFiltro)) {
+    $stmtCount->bindValue(':mes', $mesFiltro);
+}
+$stmtCount->execute();
 $total_reportajes = $stmtCount->fetchColumn();
 
-// 2. Calcular cuántas páginas existirán en total (Ej. si hay 10 reportajes, serán 2 páginas)
+// 2. Calcular cuántas páginas existirán en total
 $total_paginas = ceil($total_reportajes / $limite);
 if ($total_paginas == 0) $total_paginas = 1; 
 
-// Si un usuario curioso escribe en la URL "?pagina=100" y solo hay 5, lo devolvemos a la última válida
 if ($pagina_actual > $total_paginas) $pagina_actual = $total_paginas;
 
-// 3. Calcular el OFFSET (salto de registros). 
-// Ej: Página 1 = Offset 0. Página 2 = Offset 9.
+// 3. Calcular el OFFSET
 $offset = ($pagina_actual - 1) * $limite;
 
 // ==========================================
 // CONSULTA PRINCIPAL LIMITADA
 // ==========================================
-// Usamos bindValue porque PDO requiere tipo entero estricto para LIMIT y OFFSET
 $sql = "SELECT r.*, 
            CASE 
              WHEN r.autor_id IS NULL THEN 'Redacción DDP'
@@ -43,15 +52,24 @@ $sql = "SELECT r.*,
            END AS nombre_autor
         FROM reportajes r
         LEFT JOIN autores a ON r.autor_id = a.id
-        WHERE r.estado = 'Publicado' AND r.fecha_publicacion <= NOW() 
+        WHERE r.estado = 'Publicado' AND r.fecha_publicacion <= NOW() $condicionMes
         ORDER BY r.fecha_publicacion DESC, r.id DESC 
         LIMIT :limite OFFSET :offset";
 
 $stmt = $pdo->prepare($sql);
+if (!empty($mesFiltro)) {
+    $stmt->bindValue(':mes', $mesFiltro);
+}
 $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
 $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $reportajes = $stmt->fetchAll();
+
+// URL base para los enlaces del paginador
+$urlBase = "reportajes.php?";
+if (!empty($mesFiltro)) {
+    $urlBase .= "mes=" . urlencode($mesFiltro) . "&";
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -260,6 +278,16 @@ $reportajes = $stmt->fetchAll();
 
 <div class="grids-block-5 py-5">
     <div class="container">
+        <?php if(!empty($mesFiltro)): ?>
+            <div class="row mb-4">
+                <div class="col-12 text-center">
+                    <span class="badge bg-danger text-white p-2 px-3" style="font-size: 1.1rem; border-radius: 8px;">
+                        Filtrando resultados por mes <a href="reportajes.php" class="text-white ml-2"><i class="fa fa-times"></i></a>
+                    </span>
+                </div>
+            </div>
+        <?php endif; ?>
+        
         <div class="row">
             <?php if (count($reportajes) > 0): ?>
                 <?php foreach ($reportajes as $rep): ?>
@@ -291,7 +319,10 @@ $reportajes = $stmt->fetchAll();
             <?php else: ?>
                 <div class="col-12 text-center py-5">
                     <i class="fa fa-newspaper-o fa-3x text-muted mb-3"></i>
-                    <h3 class="text-muted">Aún no hay reportajes publicados.</h3>
+                    <h3 class="text-muted">No se encontraron reportajes en este mes.</h3>
+                    <?php if(!empty($mesFiltro)): ?>
+                        <a href="reportajes.php" class="btn btn-outline-danger mt-3">Ver todos los reportajes</a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -306,21 +337,21 @@ $reportajes = $stmt->fetchAll();
                 <!-- Botón Anterior -->
                 <?php if ($pagina_actual > 1): ?>
                     <li class="page-item">
-                        <a class="page-link" href="reportajes.php?pagina=<?= $pagina_actual - 1 ?>"><i class="fa fa-angle-left mr-1"></i> Anterior</a>
+                        <a class="page-link" href="<?= $urlBase ?>pagina=<?= $pagina_actual - 1 ?>"><i class="fa fa-angle-left mr-1"></i> Anterior</a>
                     </li>
                 <?php endif; ?>
 
                 <!-- Números de Página dinámicos -->
                 <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
                     <li class="page-item <?= ($i == $pagina_actual) ? 'active' : '' ?>">
-                        <a class="page-link" href="reportajes.php?pagina=<?= $i ?>"><?= $i ?></a>
+                        <a class="page-link" href="<?= $urlBase ?>pagina=<?= $i ?>"><?= $i ?></a>
                     </li>
                 <?php endfor; ?>
 
                 <!-- Botón Siguiente -->
                 <?php if ($pagina_actual < $total_paginas): ?>
                     <li class="page-item">
-                        <a class="page-link" href="reportajes.php?pagina=<?= $pagina_actual + 1 ?>">Siguiente <i class="fa fa-angle-right ml-1"></i></a>
+                        <a class="page-link" href="<?= $urlBase ?>pagina=<?= $pagina_actual + 1 ?>">Siguiente <i class="fa fa-angle-right ml-1"></i></a>
                     </li>
                 <?php endif; ?>
                 

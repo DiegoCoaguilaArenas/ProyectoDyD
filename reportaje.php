@@ -48,7 +48,8 @@ $rep_id_actual = $reportaje['id'];
 $stmtSidebar = $pdo->query("SELECT slug, id, titulo, fecha_publicacion FROM reportajes WHERE id != $rep_id_actual AND estado = 'Publicado' AND fecha_publicacion <= NOW() ORDER BY fecha_publicacion DESC LIMIT 3");
 $ultimasNoticias = $stmtSidebar->fetchAll();
 
-$stmtArchivos = $pdo->query("SELECT DISTINCT DATE_FORMAT(fecha_publicacion, '%Y-%m') as mes_anio, fecha_publicacion FROM reportajes WHERE estado = 'Publicado' ORDER BY fecha_publicacion DESC LIMIT 6");
+// CORRECCIÓN: Agrupar por mes para evitar duplicados
+$stmtArchivos = $pdo->query("SELECT DATE_FORMAT(fecha_publicacion, '%Y-%m') as mes_anio, MAX(fecha_publicacion) as max_fecha FROM reportajes WHERE estado = 'Publicado' GROUP BY mes_anio ORDER BY max_fecha DESC LIMIT 6");
 $archivos = $stmtArchivos->fetchAll();
 
 // URL absoluta para el SEO (Open Graph)
@@ -412,11 +413,12 @@ $imagen_og = !empty($reportaje['foto_principal']) ? $dominio . '/revista-admin/u
                 <ul class="archivo-list">
                     <?php foreach ($archivos as $arc): ?>
                     <?php 
-                        $tsArc = strtotime($arc['fecha_publicacion']);
+                        $tsArc = strtotime($arc['max_fecha']);
                         $mesesNombres = ['01'=>'Enero', '02'=>'Febrero', '03'=>'Marzo', '04'=>'Abril', '05'=>'Mayo', '06'=>'Junio', '07'=>'Julio', '08'=>'Agosto', '09'=>'Septiembre', '10'=>'Octubre', '11'=>'Noviembre', '12'=>'Diciembre'];
                         $nombreMes = $mesesNombres[date('m', $tsArc)] . ' ' . date('Y', $tsArc);
                     ?>
-                    <li><a href="reportajes.php"><?= $nombreMes ?></a></li>
+                    <!-- CORRECCIÓN: Enviar parámetro mes a la grilla principal -->
+                    <li><a href="reportajes.php?mes=<?= $arc['mes_anio'] ?>"><?= $nombreMes ?></a></li>
                     <?php endforeach; ?>
                 </ul>
             </div>
