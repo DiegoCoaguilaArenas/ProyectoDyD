@@ -28,7 +28,7 @@ $options = [
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
 } catch (\PDOException $e) {
-    // Si falla la conexión, mostramos un error genérico
-    exit('Error de conexión a la base de datos.');
+    // Mostrar el error exacto que devuelve MySQL
+    exit('Error de conexión a la base de datos: ' . $e->getMessage());
 }
 ?>
