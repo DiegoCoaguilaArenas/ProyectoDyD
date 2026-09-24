@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $url    = trim($_POST['url_embed']);
     $fecha  = $_POST['fecha_publicacion'];
     $usuario_id = $_SESSION['user_id'];
-    $foto_nombre = null;
+    $foto_nombre = ''; // CORRECCIÓN: Inicializar vacío en vez de null
 
     if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
         $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
@@ -19,9 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         move_uploaded_file($_FILES['foto']['tmp_name'], 'uploads/' . $foto_nombre);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO videos (titulo, foto, url_embed, fecha_publicacion, usuario_id) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$titulo, $foto_nombre, $url, $fecha, $usuario_id]);
-    header("Location: especiales.php"); exit;
+    try {
+        $stmt = $pdo->prepare("INSERT INTO videos (titulo, foto, url_embed, fecha_publicacion, usuario_id) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$titulo, $foto_nombre, $url, $fecha, $usuario_id]);
+        header("Location: especiales.php"); 
+        exit;
+    } catch (\PDOException $e) {
+        die("<div style='background:#ffdddd; color:#d8000c; padding:20px; border: 1px solid #d8000c;'><strong>¡Error al guardar el especial!</strong><br><br>Detalle: " . $e->getMessage() . "</div>");
+    }
 }
 
 // Editar Especial
@@ -42,20 +47,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $sql .= " AND usuario_id = ?"; $params[] = $_SESSION['user_id'];
     }
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    header("Location: especiales.php"); exit;
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        header("Location: especiales.php"); 
+        exit;
+    } catch (\PDOException $e) {
+        die("<div style='background:#ffdddd; color:#d8000c; padding:20px; border: 1px solid #d8000c;'><strong>¡Error al actualizar el especial!</strong><br><br>Detalle: " . $e->getMessage() . "</div>");
+    }
 }
 
 // Eliminar Especial
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
     $id = (int)$_POST['id'];
-    if ($es_admin_o_editor) {
-        $pdo->prepare("DELETE FROM videos WHERE id = ?")->execute([$id]);
-    } else {
-        $pdo->prepare("DELETE FROM videos WHERE id = ? AND usuario_id = ?")->execute([$id, $_SESSION['user_id']]);
+    try {
+        if ($es_admin_o_editor) {
+            $pdo->prepare("DELETE FROM videos WHERE id = ?")->execute([$id]);
+        } else {
+            $pdo->prepare("DELETE FROM videos WHERE id = ? AND usuario_id = ?")->execute([$id, $_SESSION['user_id']]);
+        }
+        header("Location: especiales.php"); 
+        exit;
+    } catch (\PDOException $e) {
+        die("<div style='background:#ffdddd; color:#d8000c; padding:20px; border: 1px solid #d8000c;'><strong>¡Error al eliminar el especial!</strong><br><br>Detalle: " . $e->getMessage() . "</div>");
     }
-    header("Location: especiales.php"); exit;
 }
 
 $especiales = $pdo->query("SELECT * FROM videos ORDER BY fecha_publicacion DESC")->fetchAll();
