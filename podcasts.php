@@ -19,7 +19,7 @@ function generarReproductor($url) {
         return '<iframe class="w-100 rounded shadow-sm" style="aspect-ratio: 16/9;" src="https://www.youtube.com/embed/' . $id . '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
     } elseif (strpos($url, 'open.spotify.com') !== false) {
         $embedUrl = str_replace('open.spotify.com/', 'open.spotify.com/embed/', $url);
-        return '<iframe style="border-radius:12px" src="' . $embedUrl . '" width="100%" height="152" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+        return '<iframe style="border-radius:12px" src="' . $embedUrl . '" width="100%" height="352" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
     }
     return false; // Retorna falso si no es compatible
 }
@@ -196,27 +196,53 @@ $podcasts = $stmt->fetchAll();
                 <?php else: ?>
                     <?php foreach ($podcasts as $pod): ?>
                     <div class="col-lg-3 col-md-4 col-sm-6 mb-5 podcast-card">
-                        <div class="p-3 border rounded bg-light shadow-sm h-100 d-flex flex-column justify-content-between">
+                        <div class="p-4 border rounded bg-white shadow-sm h-100 d-flex flex-column justify-content-between" style="border-radius: 16px !important;">
                             <div>
                                 <div class="mb-3 text-center">
-                                    <?php $reproductor = generarReproductor($pod['url_embed']); ?>
-                                    <?php if($reproductor): ?>
-                                        <?= $reproductor ?>
-                                    <?php else: ?>
-                                        <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:90px; height:90px; object-fit:cover; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                                    <?php endif; ?>
+                                    <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:110px; height:110px; object-fit:cover; margin:0 auto; box-shadow: 0 6px 15px rgba(0,0,0,0.1); border: 3px solid #e60000;">
                                 </div>
                                 <span class="text-muted small d-block mb-2 text-center"><?= fechaEs($pod['fecha_publicacion']) ?></span>
-                                <p class="text-center" style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.5; color:#333; font-weight:600;">
+                                <p class="text-center" style="font-family: 'Cabin', sans-serif; font-size:1.15rem; line-height:1.4; color:#333; font-weight:600;">
                                     <?= htmlspecialchars($pod['titulo']) ?>
                                 </p>
                             </div>
-                            <div class="mt-3 text-center">
-                                <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="btn btn-sm btn-outline-danger font-weight-bold px-3 w-100">
-                                    Ir a la plataforma <span class="fa fa-external-link ml-1"></span>
+                            <div class="mt-4 text-center">
+                                <!-- Botón Principal Redondeado -->
+                                <button class="btn w-100 text-white mb-2 shadow-sm" style="background-color: #e60000; border-radius: 50px; font-weight: 600;" data-toggle="modal" data-target="#modalPodcast<?= $pod['id'] ?>">
+                                    <i class="fa fa-play-circle mr-1"></i> Reproducir Aquí
+                                </button>
+                                <!-- Enlace limpio para plataforma externa -->
+                                <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="d-block text-danger font-weight-bold mt-2" style="font-size: 0.95rem; text-decoration: none;">
+                                    Ir a la plataforma <i class="fa fa-external-link ml-1"></i>
                                 </a>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Ventana Emergente (Modal) para este Podcast -->
+                    <div class="modal fade" id="modalPodcast<?= $pod['id'] ?>" tabindex="-1" role="dialog" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                          <div class="modal-header" style="background-color: #e60000; padding: 12px 20px;">
+                            <h5 class="modal-title text-white" style="font-family: 'Cabin', sans-serif; font-size: 1.1rem; font-weight: 600;">
+                                <i class="fa fa-podcast mr-2"></i><?= htmlspecialchars($pod['titulo']) ?>
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="opacity: 1; text-shadow: none;">
+                              <span aria-hidden="true">&times;</span>
+                            </button>
+                          </div>
+                          <div class="modal-body bg-light p-4 text-center">
+                            <?php 
+                              $reproductor = generarReproductor($pod['url_embed']); 
+                              if($reproductor) {
+                                  echo $reproductor;
+                              } else {
+                                  echo '<div class="alert alert-warning">Este enlace no admite reproducción integrada. Utiliza el botón de "Ir a la plataforma".</div>';
+                              }
+                            ?>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -282,5 +308,16 @@ $podcasts = $stmt->fetchAll();
 
 <script src="assets/js/jquery-3.3.1.min.js"></script>
 <script src="assets/js/bootstrap.min.js"></script>
+<script>
+  // Detener el reproductor si el usuario cierra la ventana emergente
+  $('.modal').on('hidden.bs.modal', function () {
+    var iframe = $(this).find('iframe');
+    if (iframe.length) {
+      var src = iframe.attr('src');
+      iframe.attr('src', '');
+      iframe.attr('src', src);
+    }
+  });
+</script>
 </body>
 </html>
