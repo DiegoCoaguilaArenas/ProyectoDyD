@@ -8,6 +8,22 @@ function fechaEs($fecha) {
     return ($meses[date('m', $ts)] ?? '') . ' ' . date('d', $ts) . ', ' . date('Y', $ts);
 }
 
+// Función para detectar plataforma y generar iframe
+function generarReproductor($url) {
+    if (strpos($url, 'youtube.com/watch?v=') !== false) {
+        parse_str(parse_url($url, PHP_URL_QUERY), $vars);
+        $id = $vars['v'] ?? '';
+        return '<iframe class="w-100 rounded shadow-sm" style="aspect-ratio: 16/9;" src="https://www.youtube.com/embed/' . $id . '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    } elseif (strpos($url, 'youtu.be/') !== false) {
+        $id = basename(parse_url($url, PHP_URL_PATH));
+        return '<iframe class="w-100 rounded shadow-sm" style="aspect-ratio: 16/9;" src="https://www.youtube.com/embed/' . $id . '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    } elseif (strpos($url, 'open.spotify.com') !== false) {
+        $embedUrl = str_replace('open.spotify.com/', 'open.spotify.com/embed/', $url);
+        return '<iframe style="border-radius:12px" src="' . $embedUrl . '" width="100%" height="152" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+    }
+    return false; // Retorna falso si no es compatible
+}
+
 // Consultar todos los podcasts ordenados del más reciente al más antiguo
 $stmt = $pdo->query("SELECT * FROM podcasts ORDER BY fecha_publicacion DESC, id DESC");
 $podcasts = $stmt->fetchAll();
@@ -28,6 +44,78 @@ $podcasts = $stmt->fetchAll();
         .podcast-card:hover {
             transform: translateY(-5px);
         }
+            /* ========================================================= */
+    /* AJUSTES RESPONSIVES (MÓVILES Y TABLETS)                   */
+    /* ========================================================= */
+
+    @media (max-width: 991px) {
+        /* Ajustes para el Reportaje Destacado en Celular/Tablet */
+        .video-gd-left {
+            padding: 2rem 1rem !important; /* Reduce el espacio interior */
+        }
+        .video-gd-right {
+            padding: 1rem !important;
+        }
+        .marco-reportaje {
+            max-width: 100% !important; /* Que ocupe todo el ancho en móvil */
+            display: block;
+        }
+        .destacado-img {
+            max-height: 350px !important; /* Imagen más pequeña en alto */
+            border-top-right-radius: 60px !important; /* Curva menos pronunciada en celular */
+            border-width: 2px !important;
+        }
+        .title-big {
+            font-size: 1.8rem !important; /* Títulos un poco más pequeños */
+            line-height: 1.2 !important;
+        }
+        .resumen-texto, .resumen-texto p {
+            font-size: 1rem !important; /* Texto más legible en móvil */
+        }
+        
+        /* Ajustes para la Grilla de Noticias y Reportajes */
+        .marco-reportaje-grid img {
+            height: auto !important; /* Anular la altura fija que deforma la foto */
+            max-height: 250px;       /* Poner un tope máximo */
+            border-top-right-radius: 50px !important;
+        }
+        .grids5-info {
+            margin-top: 2rem !important; /* Separar mejor las tarjetas apiladas */
+        }
+        
+        /* Ajustes para el Menú Superior */
+        .navbar-collapse {
+            background-color: #ffffff; /* Asegurar fondo blanco al abrir el menú en celular */
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: absolute;
+            width: 100%;
+            top: 80px;
+            left: 0;
+            z-index: 999;
+        }
+        
+        /* Paginador Responsive */
+        .pagination-container .page-link {
+            padding: 8px 12px !important;
+            font-size: 0.9rem !important;
+            margin: 0 2px !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Ajustes exclusivos para celulares pequeños */
+        .title-banner {
+            font-size: 2.2rem !important;
+        }
+        .breadcrumb-contents .title-big {
+            font-size: 1.5rem !important;
+        }
+        .content-body h1 {
+            font-size: 1.6rem !important; /* Títulos dentro de la nota */
+        }
+    }
     </style>
 </head>
 <body>
@@ -108,20 +196,27 @@ $podcasts = $stmt->fetchAll();
                 <?php else: ?>
                     <?php foreach ($podcasts as $pod): ?>
                     <div class="col-lg-3 col-md-4 col-sm-6 mb-5 podcast-card">
-                        <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="d-block text-center text-decoration-none p-3 border rounded bg-light shadow-sm h-100 d-flex flex-column justify-content-between">
+                        <div class="p-3 border rounded bg-light shadow-sm h-100 d-flex flex-column justify-content-between">
                             <div>
-                                <div class="mb-3">
-                                    <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:90px; height:90px; object-fit:cover; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                                <div class="mb-3 text-center">
+                                    <?php $reproductor = generarReproductor($pod['url_embed']); ?>
+                                    <?php if($reproductor): ?>
+                                        <?= $reproductor ?>
+                                    <?php else: ?>
+                                        <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:90px; height:90px; object-fit:cover; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                                    <?php endif; ?>
                                 </div>
-                                <span class="text-muted small d-block mb-2"><?= fechaEs($pod['fecha_publicacion']) ?></span>
-                                <p style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.5; color:#333; font-weight:600;">
+                                <span class="text-muted small d-block mb-2 text-center"><?= fechaEs($pod['fecha_publicacion']) ?></span>
+                                <p class="text-center" style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.5; color:#333; font-weight:600;">
                                     <?= htmlspecialchars($pod['titulo']) ?>
                                 </p>
                             </div>
-                            <div class="mt-3">
-                                <span class="btn btn-sm btn-outline-danger font-weight-bold px-3">Escuchar <span class="fa fa-arrow-right ml-1"></span></span>
+                            <div class="mt-3 text-center">
+                                <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="btn btn-sm btn-outline-danger font-weight-bold px-3 w-100">
+                                    Ir a la plataforma <span class="fa fa-external-link ml-1"></span>
+                                </a>
                             </div>
-                        </a>
+                        </div>
                     </div>
                     <?php endforeach; ?>
                 <?php endif; ?>

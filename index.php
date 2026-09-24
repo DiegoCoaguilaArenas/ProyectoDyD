@@ -8,6 +8,22 @@ function fechaEs($fecha) {
     return ($meses[date('m', $ts)] ?? '') . ' ' . date('d', $ts) . ', ' . date('Y', $ts);
 }
 
+// Función para detectar plataforma y generar iframe
+function generarReproductor($url) {
+    if (strpos($url, 'youtube.com/watch?v=') !== false) {
+        parse_str(parse_url($url, PHP_URL_QUERY), $vars);
+        $id = $vars['v'] ?? '';
+        return '<iframe class="w-100 rounded shadow-sm" style="aspect-ratio: 16/9;" src="https://www.youtube.com/embed/' . $id . '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    } elseif (strpos($url, 'youtu.be/') !== false) {
+        $id = basename(parse_url($url, PHP_URL_PATH));
+        return '<iframe class="w-100 rounded shadow-sm" style="aspect-ratio: 16/9;" src="https://www.youtube.com/embed/' . $id . '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    } elseif (strpos($url, 'open.spotify.com') !== false) {
+        $embedUrl = str_replace('open.spotify.com/', 'open.spotify.com/embed/', $url);
+        return '<iframe style="border-radius:12px" src="' . $embedUrl . '" width="100%" height="152" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+    }
+    return false; // Retorna falso si no es compatible, para mostrar la imagen por defecto
+}
+
 // 1. Reportaje Destacado (Solo publicados y fecha actual o pasada)
 $stmtDestacado = $pdo->query("SELECT * FROM reportajes WHERE es_destacado = 1 AND estado = 'Publicado' AND fecha_publicacion <= NOW() ORDER BY fecha_publicacion DESC, id DESC LIMIT 1");
 $repDestacado = $stmtDestacado->fetch();
@@ -106,8 +122,8 @@ $especiales = $stmtVideos->fetchAll();
         }
 
         /* ========================================================= */
-/* AJUSTES RESPONSIVES (MÓVILES Y TABLETS)                   */
-/* ========================================================= */
+        /* AJUSTES RESPONSIVES (MÓVILES Y TABLETS)                   */
+        /* ========================================================= */
 
     @media (max-width: 991px) {
         /* Ajustes para el Reportaje Destacado en Celular/Tablet */
@@ -409,14 +425,22 @@ $especiales = $stmtVideos->fetchAll();
             <?php else: ?>
                 <?php foreach ($podcasts as $pod): ?>
                 <div class="col-lg-3 col-sm-6 mt-4 mt-lg-0 mb-4">
-                    <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="d-block text-decoration-none">
+                    <div class="d-block p-3 border rounded bg-light shadow-sm h-100 d-flex flex-column justify-content-between">
                         <div class="mb-3">
-                            <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:85px; height:85px; object-fit:cover; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <?php $reproductor = generarReproductor($pod['url_embed']); ?>
+                            <?php if($reproductor): ?>
+                                <?= $reproductor ?>
+                            <?php else: ?>
+                                <img src="assets/images/podcast.png" alt="Podcast" class="img-fluid rounded-circle" style="width:85px; height:85px; object-fit:cover; margin:0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            <?php endif; ?>
                         </div>
-                        <p style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.5; color:#555; font-weight:500;">
+                        <p style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.5; color:#555; font-weight:500; margin-bottom: 15px;">
                             <?= htmlspecialchars($pod['titulo']) ?>
                         </p>
-                    </a>
+                        <a href="<?= htmlspecialchars($pod['url_embed']) ?>" target="_blank" class="btn btn-sm btn-outline-danger w-100 mt-auto">
+                            <i class="fa fa-external-link me-1"></i> Escuchar en plataforma
+                        </a>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -437,20 +461,30 @@ $especiales = $stmtVideos->fetchAll();
                       $fotoEsp = !empty($esp['foto']) 
                         ? 'revista-admin/uploads/' . $esp['foto'] 
                         : 'assets/images/team2.jpg'; 
+                      $reproductorEsp = generarReproductor($esp['url_embed']);
                     ?>
                     <div class="item">
                         <div class="d-grid team-info">
                             <div class="column position-relative">
-                                <a href="<?= htmlspecialchars($esp['url_embed']) ?>" target="_blank">
-                                    <div class="rounded p-2" style="background-color: #111; border-radius: 12px; height: 180px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
-                                        <img src="<?= $fotoEsp ?>" alt="" class="img-fluid rounded" style="width:100%; height:100%; object-fit:cover; opacity: 0.85;" />
+                                <?php if($reproductorEsp): ?>
+                                    <div class="rounded p-2 bg-light shadow-sm mb-3">
+                                        <?= $reproductorEsp ?>
                                     </div>
-                                </a>
+                                <?php else: ?>
+                                    <a href="<?= htmlspecialchars($esp['url_embed']) ?>" target="_blank">
+                                        <div class="rounded p-2" style="background-color: #111; border-radius: 12px; height: 180px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
+                                            <img src="<?= $fotoEsp ?>" alt="" class="img-fluid rounded" style="width:100%; height:100%; object-fit:cover; opacity: 0.85;" />
+                                        </div>
+                                    </a>
+                                <?php endif; ?>
                             </div>
-                            <div class="column mt-3">
-                                <p style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.4; color:#555; font-weight:500;">
+                            <div class="column mt-2">
+                                <p style="font-family: 'Cabin', sans-serif; font-size:1.05rem; line-height:1.4; color:#555; font-weight:500; margin-bottom: 10px;">
                                     <?= htmlspecialchars($esp['titulo']) ?>
                                 </p>
+                                <a href="<?= htmlspecialchars($esp['url_embed']) ?>" target="_blank" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa fa-play-circle me-1"></i> Ver original
+                                </a>
                             </div>
                         </div>
                     </div>
